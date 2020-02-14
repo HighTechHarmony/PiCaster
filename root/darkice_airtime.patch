@@ -1,0 +1,6 @@
+diff darkice-1.3/src/IceCast2.cpp darkice-1.3-custom_wbtvlp_master_stream-works/src/IceCast2.cpp
+180c180,181
+<         const char  * source = "source:";
+---
+>         //const char  * source = "source:";
+>         const char  * source = "master:";
