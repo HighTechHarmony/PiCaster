@@ -11,6 +11,7 @@ Airtime 2.5.1 (Liquidsoap 1.1.1)
 
 # Installation
 * Copy etc/darkice.cfg into your /etc
+* Customize darkice.cfg it with your password information for your Airtime stream input
 * Copy the contents of root into your /root
 
 # Notes
@@ -18,8 +19,8 @@ root/darkice-1.3-custom_wbtvlp_master_stream-works/ contains a home-rolled versi
 
 This was done because:
 
--Darkice is the only audio device->stream program I could find that supports mp3 (ices2 only does OGG Vorbis, which is broken in our Liquidsoap version).
+* Darkice is the only audio device->stream program I could find that supports mp3 (ices2 only does OGG Vorbis, which is broken in our Liquidsoap version).
 
--Darkice does not support specification of the username in the config file parameters - it is hardcoded to "source".  
+* Darkice does not support specification of the username in the config file parameters - it is hardcoded to "source".  
 
 
