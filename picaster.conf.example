@@ -1,0 +1,18 @@
+[server info]
+address = "libretime.host.com"
+port = 8001
+streamuser = master
+streampassword = changeme
+mountname = main
+
+[hardware]
+gpio_net_connect_ok = 16
+gpio_on_air_light = 21
+gpio_on_air_switch = 20
+sound_device = hw:2,0
+input_type = alsa
+
+[general]
+home_path = /home/user
+runasuser = user
+
