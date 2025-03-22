@@ -1,3 +1,0 @@
-artist="99.3 WBTV-LP"
-title="99.3 WBTV-LP Remote Broadcast"
-

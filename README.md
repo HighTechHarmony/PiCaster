@@ -57,10 +57,33 @@ Switching back to standby will gracefully terminate liquidsoap and the on-air li
 
 # Notes
 
+## Liquidsoap
+
+This project was started in 2019, and originally used darkice. It has been overhauled to use liquidsoap due to its significantly more robust and versatile nature. However liquidsoap is rather resource intensive, so it is unlikely that this will work well on anything less than a Raspberry Pi 3.
+
+## Implementing ALSA
+
 ALSA is recommended. To identify your hardware address, install `apt install alsa-utils`
 
 Then do: `aplay -l`
 
 Find the first entry that matches your audio hardware, as identified in `lsusb`
 
-This project was started in 2019 and originally used darkice. It has been overhauled to use liquidsoap due to its significantly more robust and versatile nature. However liquidsoap is rather resource intensive, so it is unlikely that this will work well on anything less than a Raspberry Pi 3.
+## Workaround broken liquidsoap package on Bookworm
+
+[https://forums.raspberrypi.com/viewtopic.php?t=358145]
+Liquidsoap Version 2.1.3-2 (Bookworm default) on the new image of Raspbian Bookworm seems to report a segmentation fault when attempting to launch. The fault occurs regardless of any attempts to load and execute a script. You can simply type "liquidsoap --version" and get the same fault response.
+
+I found the following workaround to be succesful:
+
+1. Create the /etc/apt/preferences.d/ffmpeg.pref file with the following contents:
+
+Package: ffmpeg libavcodec-dev libavcodec59 libavdevice59 libavfilter8 libavformat-dev libavformat59 libavutil-dev libavutil57 libpostproc56 libswresample-dev libswresample4 libswscale-dev libswscale6
+Pin: origin deb.debian.org
+Pin-Priority: 1001
+
+(This tells apt to only get these packages from the Debian repos, not the archive.raspberrypi.com repos. The priority of 1001 tells apt that we want it to downgrade packages, if needed.)
+
+2. Run apt to downgrade (or install) the problematic packages:
+
+sudo apt install ffmpeg libswresample4 libavdevice59 libavfilter8 libpostproc56 libavutil57 libswscale6 libavformat59 libavcodec59
