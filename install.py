@@ -173,6 +173,42 @@ with open(home_path + "/picaster-connect-test.service", "w") as output_file:
     )
     output_file.close()
 
+# Create the button monitor service file
+# [Unit]
+# Description=PiCaster reset button monitor
+# After=network-online.target
+# Wants=network-online.target
+
+# [Service]
+# Type=simple
+# User=runasuser
+# Group=runasuser
+# WorkingDirectory=home_path
+# ExecStart=/usr/bin/env bash -c 'exec /usr/bin/python3 /home/user/button_monitor.py'
+# Restart=always
+# RestartSec=5
+
+# [Install]
+# WantedBy=multi-user.target
+with open(home_path + "/picaster-button-monitor.service", "w") as output_file:
+    output_file.write(
+        "[Unit]\nDescription=PiCaster reset button monitor\nAfter=network-online.target\nWants=network-online.target\n\n"
+    )
+    output_file.write(
+        "[Service]\nType=simple\nUser=%s\nGroup=%s\nWorkingDirectory=%s\n" % (runasuser, runasuser, home_path),
+    )
+    output_file.write(
+        "ExecStart=/usr/bin/env bash -c 'exec /usr/bin/python3 %s/button_monitor.py'\n" % home_path
+    )
+    output_file.write(
+        "Restart=always\nRestartSec=5\n\n"
+    )
+    output_file.write(
+        "[Install]\nWantedBy=multi-user.target\n"
+    )
+    output_file.close()
+
+
 # Copy the service file to /etc/systemd/system
 try:
     target_path = "/etc/systemd/system/picaster-broadcast.service"
@@ -185,13 +221,26 @@ try:
     shutil.copy(home_path + "/picaster-connect-test.service", target_path)
     print("Service file copied successfully.")
 
+    target_path = "/etc/systemd/system/picaster-button-monitor.service"
+    print(f"Copying service file to {target_path}...")
+    shutil.copy(home_path + "/picaster-button-monitor.service", target_path)
+    print("Service file copied successfully.")
+
     # Reload systemd to recognize the new service
     os.system("sudo systemctl daemon-reload")
-    print("Systemd reloaded. You can now enable and start the services using:")
-    print("  sudo systemctl enable picaster-broadcast.service")
-    print("  sudo systemctl start picaster-broadcast.service")
-    print("  sudo systemctl enable picaster-connect-test.service")
-    print("  sudo systemctl start picaster-connect-test.service")
+    # print("Systemd reloaded. You can now enable and start the services using:")
+    # print("  sudo systemctl enable picaster-broadcast.service")
+    # print("  sudo systemctl start picaster-broadcast.service")
+    # print("  sudo systemctl enable picaster-connect-test.service")
+    # print("  sudo systemctl start picaster-connect-test.service")
+
+    # Enable and restart the services
+    os.system("sudo systemctl enable picaster-broadcast.service")
+    os.system("sudo systemctl start picaster-broadcast.service")
+    os.system("sudo systemctl enable picaster-connect-test.service")
+    os.system("sudo systemctl start picaster-connect-test.service")
+    os.system("sudo systemctl enable picaster-button-monitor.service")
+    os.system("sudo systemctl start picaster-button-monitor.service")
 
 except PermissionError:
     print("Error: Root privileges are required to copy the service files to /etc/systemd/system.")

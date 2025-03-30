@@ -35,6 +35,7 @@ Schematic coming soon.
 - Copy picaster.conf.example to /etc/picaster.conf and edit as appropriate for your setup
 - Run the installer as follows:
   `sudo python3 install.sh`
+  This will utilize your config file to generate a liquidsoap script and the necessary systemd service units.
 
 - Enable and start the processes:
 
@@ -45,9 +46,15 @@ Schematic coming soon.
   sudo systemctl start picaster-connect-test.service
 ```
 
+# Configuration
+
+Boot the Pi and then, when it is fully booted, hold the button GPIO for 5-6 seconds. Both LEDs should start flashing. At this point, there is an open WiFi hotspot called "PiCaster" which you can connect to with a smartphone. You will automatically be redirected to a configuration portal page, in which you can enter a SSID and PSK for a wireless internet connection, as well as change important config values for the PiCaster.
+
+When you press submit, the values will be applied, and the Pi will reboot.
+
 # Operation
 
-Upon bootup, the picaster-connect-test service will attempt to connect to the configured port and verify that net connectivity is there (nothing else). It will test periodically to ensure this is still the case.
+Upon bootup, the picaster-connect-test service will attempt to connect to the configured address and port, and verify that net connectivity is there (nothing else). It will test periodically to ensure this is still the case.
 
 The picaster-broadcast service will monitor the switch.
 
@@ -69,7 +76,7 @@ Then do: `aplay -l`
 
 Find the first entry that matches your audio hardware, as identified in `lsusb`
 
-## Workaround broken liquidsoap package on Bookworm
+## Required workaround for broken liquidsoap package on Bookworm
 
 [https://forums.raspberrypi.com/viewtopic.php?t=358145]
 Liquidsoap Version 2.1.3-2 (Bookworm default) on the new image of Raspbian Bookworm seems to report a segmentation fault when attempting to launch. The fault occurs regardless of any attempts to load and execute a script. You can simply type "liquidsoap --version" and get the same fault response.

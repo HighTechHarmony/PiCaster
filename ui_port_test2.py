@@ -18,12 +18,12 @@ import signal
 # The script requires at least the following:
 # address (the address of the server)
 # port (the port number of the server)
-# gpio_net_connect_ok (the gpio address of the green light)
+# gpio_net_connect_ok_light (the gpio address of the green light)
 # 
 # Example values:
 # address= "libretime-vm"
 # port = 8003
-# gpio_net_connect_ok = 16
+# gpio_net_connect_ok_light = 16
 
 config_file = "/etc/picaster.conf"
 if not os.path.exists(config_file):
@@ -31,7 +31,7 @@ if not os.path.exists(config_file):
 
 address = ""
 port = 0
-gpio_net_connect_ok = 0
+gpio_net_connect_ok_light = 0
 
 try:
 	with open(config_file) as f:
@@ -43,8 +43,8 @@ try:
 				# Strip quotes and convert to int
 				port = int(line.split("=")[1].strip())
 
-			if re.search("gpio_net_connect_ok", line):
-				gpio_net_connect_ok = int(line.split("=")[1].strip())
+			if re.search("gpio_net_connect_ok_light", line):
+				gpio_net_connect_ok_light = int(line.split("=")[1].strip())
 				
 
 except:
@@ -55,7 +55,7 @@ except:
 address = address.replace('"', '')
 
 
-if address == "" or port == 0 or gpio_net_connect_ok == 0:
+if address == "" or port == 0 or gpio_net_connect_ok_light == 0:
 	print ("Error reading config file, missing values")
 	sys.exit(1)
 
@@ -63,9 +63,9 @@ if address == "" or port == 0 or gpio_net_connect_ok == 0:
 def signal_handler(signal, frame):
         print('You pressed Ctrl+C!')
 		# Turn off the light in case it was on
-        GPIO.output(gpio_net_connect_ok, GPIO.LOW)
+        GPIO.output(gpio_net_connect_ok_light, GPIO.LOW)
         time.sleep (1)
-        GPIO.cleanup(gpio_net_connect_ok)
+        GPIO.cleanup(gpio_net_connect_ok_light)
         print ("Clean up GPIO\n")
         sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
@@ -73,9 +73,9 @@ signal.signal(signal.SIGINT, signal_handler)
 # Another signal handler for the termination signal by systemd
 def sigterm_handler(signal, frame):
 	print('Received SIGTERM signal')
-	GPIO.output(gpio_net_connect_ok, GPIO.LOW)
+	GPIO.output(gpio_net_connect_ok_light, GPIO.LOW)
 	time.sleep (1)
-	GPIO.cleanup(gpio_net_connect_ok)
+	GPIO.cleanup(gpio_net_connect_ok_light)
 	print ("Clean up GPIO\n")
 	sys.exit(0)
 signal.signal(signal.SIGTERM, sigterm_handler)
@@ -85,8 +85,8 @@ signal.signal(signal.SIGTERM, sigterm_handler)
 # GPIO setup
 GPIO.setmode(GPIO.BCM)
 
-# gpio_net_connect_ok is the gpio address of the green light
-GPIO.setup(gpio_net_connect_ok, GPIO.OUT)
+# gpio_net_connect_ok_light is the gpio address of the green light
+GPIO.setup(gpio_net_connect_ok_light, GPIO.OUT)
 
 
 def check_server(address, port):
@@ -105,9 +105,9 @@ def check_server(address, port):
 
 while True:
 	if check_server (address, port):
-		GPIO.output(gpio_net_connect_ok, GPIO.HIGH)
+		GPIO.output(gpio_net_connect_ok_light, GPIO.HIGH)
 	else:
-		GPIO.output(gpio_net_connect_ok, GPIO.LOW)
+		GPIO.output(gpio_net_connect_ok_light, GPIO.LOW)
 	time.sleep(15)
 
 

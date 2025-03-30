@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PiCaster Setup</title>
+</head>
+<body>
+    <h1>Setup Your PiCaster</h1>
+    <form method="POST">
+        <!-- <label>SSID: <input type="text" name="ssid" required></label><br>
+        <label>PSK: <input type="password" name="psk" required></label><br> -->
+        {% for key, value in config.items() %}
+        <label>{{ key }}: 
+            <!-- <input type="{{ 'password' if 'password' in key.lower() else 'text' }}" name="{{ key }}" value="{{ value }}"> -->
+            <input type="{{ 'password' if 'password' in key.lower() or 'psk' in key.lower() else 'text' }}" name="{{ key }}" value="{{ value }}">
+        </label><br>
+        {% endfor %}
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>

@@ -6,9 +6,10 @@ streampassword = changeme
 mountname = main
 
 [hardware]
-gpio_net_connect_ok = 16
+gpio_net_connect_ok_light = 16
 gpio_on_air_light = 21
 gpio_on_air_switch = 20
+gpio_setup_button = 12
 sound_device = hw:2,0
 input_type = alsa
 
