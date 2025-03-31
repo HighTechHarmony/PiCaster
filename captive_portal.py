@@ -17,13 +17,32 @@ def load_config():
         for line in f:
             if (line.__contains__("=")):
                 key, value = line.strip().split("=")
-                config[key] = value    
+                config[key] = value
+    # Clean up the keys in the config dictionary
+    config = {key.strip(): value.strip() for key, value in config.items()}
+
     return config
 
 def save_config(data):
     with open(CONFIG_FILE, "w") as f:
         for key, value in data.items():
             f.write(f"{key}={value}\n")
+
+
+def get_available_ssids():
+    """Scan for available WiFi networks and return a list of SSIDs."""
+    try:
+        result = subprocess.run(['nmcli', '-t', '-f', 'SSID', 'dev', 'wifi'], capture_output=True, text=True, check=True)
+        ssids = result.stdout.splitlines()
+        # Remove empty SSIDs and duplicates
+        ssids = list(filter(None, set(ssids)))
+        # Sort the SSIDs by name
+        ssids.sort(reverse=True)
+
+        return ssids
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to scan for WiFi networks: {e}")
+        return []
 
 
 print("Starting captive portal...")
@@ -59,7 +78,7 @@ try:
 except Exception as e:
     print(f"Failed to create /etc/NetworkManager/dnsmasq-shared.d/04-captive-portal-redirect.conf: {e}")
 
-# This brings up the hotspot AP
+# Configure the hotspot AP connection in NetworkManager
 try:
     # Add a new WiFi access point connection
     # nmcli con add con-name PiCaster-AP ifname wlan0 type wifi ssid PiCaster mode ap wifi.band bg wifi.channel 6 ipv4.method shared
@@ -81,28 +100,20 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"Failed to activate PiCaster-AP connection: {e}")
 
-
-
-
-
-
-# Catchall route 302 redirects to / to serve the captive portal
-# @app.route("/", defaults={"path": ""})
-# @app.route("/<path:path>")
-# def catch_all(path):
-#     return redirect("/", code=302)
-
-# Generate 204 status code to avoid browser redirecting to the captive portal
+# generate_204 is a special URL that Android devices use to check if they are connected to the internet
+# Redirect this to / so that the captive portal page is served instead
 @app.route("/generate_204")
 @app.route("/gen_204")
 def generate_204():    
     return redirect("/", code=302)
 
 
-
 # Reply with the captive portal page for any request
 @app.route("/", methods=["GET", "POST"])
 def index():
+
+    ssids = get_available_ssids()   
+
     if request.method == "POST":
         ssid = request.form.get("ssid")
         psk = request.form.get("psk")
@@ -110,43 +121,124 @@ def index():
         config.update(request.form.to_dict())
         save_config(config)
         
-        # Update the WiFi connection using nmcli
-        try:
-            # Delete the existing connection
-            subprocess.run(['nmcli', 'con', 'delete', 'MyWifi'], check=True)
-            print("Deleted existing MyWifi connection.")
-        except subprocess.CalledProcessError as e:
-            # print(f"Failed to delete existing MyWifi connection: {e}")
-            # Do nothing
-            pass
+        # Delete the old WiFi connection using nmcli
+        # try:
+        #     # Delete the existing connection
+        #     subprocess.run(['nmcli', 'con', 'delete', 'MyWifi'], check=True)
+        #     print("Deleted existing MyWifi connection.")
+        # except subprocess.CalledProcessError as e:
+        #     # print(f"Failed to delete existing MyWifi connection: {e}")
+        #     # Do nothing
+        #     pass
 
         try:
-            # Add a new WiFi connection
-            subprocess.run([
-                'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type', 
-                'wifi','ssid', ssid, 'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk]
-            , check=True)
-            print("Added new MyWifi connection.")
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to add new MyWifi connection: {e}")
+            # Either add or modify the WiFi connection, depending...
+            print(f"Checking if MyWifi connection exists...")
+            result = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'con', 'show'], capture_output=True, text=True, check=True)
+            existing_connections = result.stdout.splitlines()
 
-    
+            if 'MyWifi' in existing_connections:
+                print(f"MyWifi connection exists. Modifying the connection with SSID {ssid} and PSK {psk}.")
+                if psk is None or psk == "":
+                    # Open network (no PSK)
+                    subprocess.run([
+                        'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid
+                    ], check=True)
+                else:
+                    # Secured network
+                    subprocess.run([
+                        'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid,
+                        'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
+                    ], check=True)
+            else:
+                print(f"MyWifi connection does not exist. Adding a new connection with SSID {ssid} and PSK {psk}.")
+                if psk is None or psk == "":
+                    # Open network (no PSK)
+                    subprocess.run([
+                        'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
+                        'wifi', 'ssid', ssid
+                    ], check=True)
+                else:
+                    # Secured network
+                    subprocess.run([
+                        'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
+                        'wifi', 'ssid', ssid, 'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
+                    ], check=True)
+
+            print("WiFi connection configured successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to configure MyWifi connection: {e}")
+
+        
         # Bring up the WiFi connection
+        wifi_activated = False        
         try:
+            print("Activating MyWifi connection...")
             subprocess.run(['nmcli', 'con', 'up', 'MyWifi'], check=True)
             print("Activated MyWifi connection.")
+            wifi_activated = True            
         except subprocess.CalledProcessError as e:
+            # error_message = "Failed to activate WiFi connection because: " + str(e)
+            error_message = "Failed to activate WiFi connection. Please check the configuration and try again."
             print(f"Failed to activate MyWifi connection: {e}")
 
         # Wait for the WiFi connection to be established
         time.sleep(5)
         
-        # Run install script and reboot
-        # os.system("sudo python3 /path/to/install.py")
-        os.system("sudo reboot")
+       # Proceed with install script and reboot only if WiFi activation succeeded
+        if wifi_activated:
+            success_message = "WiFi connection activated successfully. Rebooting..."
+            config = load_config()
+            rendered_page = render_template(
+                "index.html",
+                config=config,
+                ssids=ssids,
+                error_message=None,
+                success_message=success_message
+            )
+        
+            # Send the rendered page to the user
+            with open("/tmp/rendered_page.html", "w") as f:
+                f.write(rendered_page)
+
+
+            # stop the button monitor service
+            os.system("sudo systemctl stop picaster-button-monitor.service")
+            if 'home_path' in config:
+                print("Running install script {}/install.py".format(config['home_path']))
+            else:
+                print("Error: Unable to launch install.py, incorrect path configuration?")
+                print("config: ")
+                print(config)                
+            try:
+                # Run install.py from the home_dir location
+                config = load_config()
+                os.system("sudo python3 {}/install.py -silent".format(config['home_path']))
+                print("Install script completed successfully.")                
+            except Exception as e:
+                print(f"Failed to run install script: {e}")
+                error_message = "WARNING: Failed to run install new config. Check the configuration and try again."
+                config = load_config()
+                rendered_page = render_template(
+                    "index.html",
+                    config=config,
+                    ssids=ssids,
+                    error_message=error_message,
+                    success_message=None
+                )                
+                # Send the rendered page to the user
+                with open("/tmp/rendered_page.html", "w") as f:
+                    f.write(rendered_page)
+
+            # If we made it this far, reboot the system
+            print("Rebooting...")
+            os.system("sudo reboot")
+        else:
+            print("Skipping install script and reboot due to WiFi activation failure.")
+
 
     config = load_config()
-    return render_template("index.html", config=config)
+    return render_template("index.html", config=config, ssids=ssids, error_message=error_message if "error_message" in locals() else None, success_message=success_message if "success_message" in locals() else None)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)

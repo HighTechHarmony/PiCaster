@@ -4,6 +4,7 @@
 # a LiquidScript file
 # systemd service files
 
+import argparse
 import os
 import re
 import sys
@@ -28,6 +29,19 @@ if not os.path.exists(config_file):
 # home = /home/user
 # runasuser = user
 
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description="Install PiCaster services.")
+parser.add_argument(
+    "-silent",
+    action="store_true",
+    help="Run the script in silent mode, skipping any prompts or questions."
+)
+args = parser.parse_args()
+
+# Check if silent mode is enabled
+silent_mode = args.silent
+if silent_mode:
+    print("Running in silent mode. No prompts will be displayed.")
 
 try:
     with open(config_file) as f:

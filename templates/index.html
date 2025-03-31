@@ -2,19 +2,201 @@
 <html>
 <head>
     <title>PiCaster Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Ensures responsiveness -->
+    <style>
+        /* General styles */
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 18px; /* Large, readable font size */
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9; /* Light background for readability */
+            color: #333; /* Dark text for contrast */
+        }
+
+        h1 {
+            font-size: 24px; /* Larger font for the title */
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        form {
+            max-width: 400px; /* Limit form width for better readability */
+            margin: 20px auto; /* Center the form */
+            padding: 20px;
+            background: #fff; /* White background for the form */
+            border-radius: 8px; /* Rounded corners */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+        }
+
+        label, select, button {
+            display: block;
+            font-size: 16px; /* Readable label font size */            
+            width: 100%; 
+            /* bold */
+            font-weight: bold;
+            
+        }
+
+        small {
+            display: block;
+            font-size: 12px; /* Readable label font size */
+            color: #666; /* Lighter text color */
+        }
+
+        input {
+            width: 100%; /* Full width for inputs */
+            padding: 10px;
+            font-size: 16px;            
+            border: 1px solid #ccc; /* Subtle border */
+            border-radius: 4px; /* Rounded corners */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        button {
+            width: 100%; /* Full width for the button */
+            padding: 12px;
+            font-size: 18px; /* Larger button text */
+            color: #fff;
+            background-color: #007bff; /* Blue button */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            body {
+                font-size: 16px; /* Slightly smaller font for small screens */
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            form {
+                padding: 15px;
+            }
+
+            button {
+                font-size: 16px;
+            }
+        }
+
+        /* Spinner styles */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3); /* Light border for visibility */
+            border-radius: 50%;
+            border-top-color: white; /* White top border for contrast */
+            animation: spin 1s ease-in-out infinite; /* Spinning animation */
+            vertical-align: middle; /* Align spinner with text */
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Setup Your PiCaster</h1>
-    <form method="POST">
-        <!-- <label>SSID: <input type="text" name="ssid" required></label><br>
-        <label>PSK: <input type="password" name="psk" required></label><br> -->
-        {% for key, value in config.items() %}
-        <label>{{ key }}: 
-            <!-- <input type="{{ 'password' if 'password' in key.lower() else 'text' }}" name="{{ key }}" value="{{ value }}"> -->
-            <input type="{{ 'password' if 'password' in key.lower() or 'psk' in key.lower() else 'text' }}" name="{{ key }}" value="{{ value }}">
-        </label><br>
-        {% endfor %}
-        <button type="submit">Submit</button>
+    <h1>Setup Your PiCaster</h1> 
+    
+     <!-- Display error message if it exists -->
+     {% if error_message %}
+     <div style="color: red; font-weight: bold; margin-bottom: 20px;">
+         {{ error_message }}
+     </div>     
+     {% endif %}
+     {% if success_message %}
+        <div style="color: green; font-weight: bold; margin-bottom: 20px;">
+            {{ success_message }}  
+        </div>
+     {% endif %}
+     
+    <form method="POST" onsubmit="showSpinner(this)">
+        <fieldset>
+            <legend>WiFi Network Configuration</legend>
+            <label for="ssid">Select Network:</label>
+            <select id="ssid" name="ssid">
+                <!-- {% for ssid in ssids %}
+                <option value="{{ ssid }}">{{ ssid }}</option>
+                {% endfor %} -->
+                {% for network in ssids %}
+                <option value="{{ network }}" {% if network == ssid %}selected{% endif %}>
+                    {{ network }}
+                </option>
+                {% endfor %}
+            </select>
+            <!-- <label for="password">WiFi Password:</label> -->
+            <input type="text" id="psk" name="psk" placeholder="Enter WiFi password">
+            <button type="submit" class="submit-button" id="submit-button">Connect</button>
+        </fieldset>
+
+        <fieldset>
+            <legend>Stream Server Configuration</legend>
+            {% for key, value in config.items() %}
+            <label>{{ key }}: 
+                {% if 'address' in key.lower() %}
+                    <small><br>(Enter address of stream server, i.e.: libretime.server.com)</small>
+                {% elif 'runasuser' in key.lower() %}
+                    <small><br>(Leave this alone)</small>
+                {% elif 'port' in key.lower() %}
+                    <small><br>(Enter port of stream server, i.e.: 8001)</small>
+                {% elif 'mountname' in key.lower() %}
+                    <small><br>(Enter mount name, i.e.: "main")</small>
+                {% elif 'streamuser' in key.lower() %}
+                    <small><br>(Enter stream server username, i.e.: source)</small>
+                {% elif 'streampass' in key.lower() %}
+                    <small><br>(Enter stream server password)</small>
+                {% elif 'gpio' in key.lower() %}
+                    <small><br>(Leave this alone)</small>
+                {% elif 'sound_device' in key.lower() %}
+                    <small><br>(Leave this alone)</small>
+                {% elif 'input_type' in key.lower() %}
+                    <small><br>(Leave this alone)</small>
+                {% else %}
+                    <small></small>
+                {% endif %}
+                
+                <!-- <input type="{{ 'password' if 'password' in key.lower() or 'psk' in key.lower() else 'text' }}" name="{{ key }}" value="{{ value }}"> -->
+                
+                <!-- {% if 'ssid' not in key.lower() and 'psk' not in key.lower() %}
+                    <input type="{{ 'password' if 'password' in key.lower() or 'psk' in key.lower() else 'text' }}" name="{{ key }}" value="{{ value }}">
+                {% endif %} -->
+
+                {% if 'ssid' in key.lower() or 'psk' in key.lower() %}
+                    <p>{{ value }}</p>
+                {% else %}
+                    <input type="{{ 'password' if 'password' in key.lower() or 'psk' in key.lower() else 'text' }}" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+            </label><br>
+            {% endfor %}
+        </fieldset>
+        <button type="submit" class="submit-button" id="submit-button">Submit</button>
     </form>
+
+    <script>
+        function showSpinner(form) {
+            // Find all submit buttons in the form
+            const buttons = form.querySelectorAll('.submit-button');
+            buttons.forEach(button => {
+                // Replace button text with a spinner
+                button.innerHTML = '<span class="spinner"></span>';
+                // Disable the button to prevent multiple submissions
+                button.disabled = true;
+            });
+        }
+    </script>
 </body>
 </html>
