@@ -21,6 +21,7 @@ def load_config():
     # Clean up the keys in the config dictionary
     config = {key.strip(): value.strip() for key, value in config.items()}
 
+    # Returns a dict of field=value pairs
     return config
 
 def save_config(data):
@@ -121,77 +122,92 @@ def index():
         config.update(request.form.to_dict())
         save_config(config)
         
-        # Delete the old WiFi connection using nmcli
-        # try:
-        #     # Delete the existing connection
-        #     subprocess.run(['nmcli', 'con', 'delete', 'MyWifi'], check=True)
-        #     print("Deleted existing MyWifi connection.")
-        # except subprocess.CalledProcessError as e:
-        #     # print(f"Failed to delete existing MyWifi connection: {e}")
-        #     # Do nothing
-        #     pass
+        
+        if ssid == "do_not_change":
+            print ("SSID is do_not_change")
+            wifi_approved = True  # Skip WiFi verification
+        else:
+            print(f"SSID is {ssid}")
+            wifi_approved = False
+            
+        
+            # Delete the old WiFi connection using nmcli
+            # try:
+            #     # Delete the existing connection
+            #     subprocess.run(['nmcli', 'con', 'delete', 'MyWifi'], check=True)
+            #     print("Deleted existing MyWifi connection.")
+            # except subprocess.CalledProcessError as e:
+            #     # print(f"Failed to delete existing MyWifi connection: {e}")
+            #     # Do nothing
+            #     pass
 
-        try:
-            # Either add or modify the WiFi connection, depending...
-            print(f"Checking if MyWifi connection exists...")
-            result = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'con', 'show'], capture_output=True, text=True, check=True)
-            existing_connections = result.stdout.splitlines()
 
-            if 'MyWifi' in existing_connections:
-                print(f"MyWifi connection exists. Modifying the connection with SSID {ssid} and PSK {psk}.")
-                if psk is None or psk == "":
-                    # Open network (no PSK)
-                    subprocess.run([
-                        'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid
-                    ], check=True)
+        # Verify the WiFi connection
+        if not wifi_approved:
+            try:
+                # Either add or modify the WiFi connection, depending...
+                print(f"Checking if MyWifi connection exists...")
+                result = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'con', 'show'], capture_output=True, text=True, check=True)
+                existing_connections = result.stdout.splitlines()
+
+                if 'MyWifi' in existing_connections:
+                    print(f"MyWifi connection exists. Modifying the connection with SSID {ssid} and PSK {psk}.")
+                    if psk is None or psk == "":
+                        # Open network (no PSK)
+                        subprocess.run([
+                            'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid
+                        ], check=True)
+                    else:
+                        # Secured network
+                        subprocess.run([
+                            'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid,
+                            'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
+                        ], check=True)
                 else:
-                    # Secured network
-                    subprocess.run([
-                        'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid,
-                        'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
-                    ], check=True)
-            else:
-                print(f"MyWifi connection does not exist. Adding a new connection with SSID {ssid} and PSK {psk}.")
-                if psk is None or psk == "":
-                    # Open network (no PSK)
-                    subprocess.run([
-                        'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
-                        'wifi', 'ssid', ssid
-                    ], check=True)
-                else:
-                    # Secured network
-                    subprocess.run([
-                        'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
-                        'wifi', 'ssid', ssid, 'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
-                    ], check=True)
+                    print(f"MyWifi connection does not exist. Adding a new connection with SSID {ssid} and PSK {psk}.")
+                    if psk is None or psk == "":
+                        # Open network (no PSK)
+                        subprocess.run([
+                            'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
+                            'wifi', 'ssid', ssid
+                        ], check=True)
+                    else:
+                        # Secured network
+                        subprocess.run([
+                            'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
+                            'wifi', 'ssid', ssid, 'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
+                        ], check=True)
 
-            print("WiFi connection configured successfully.")
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to configure MyWifi connection: {e}")
+                print("WiFi connection configured successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to configure MyWifi connection: {e}")
+
+            
+            # Bring up the WiFi connection
+            wifi_approved = False        
+            try:
+                print("Activating MyWifi connection...")
+                subprocess.run(['nmcli', 'con', 'up', 'MyWifi'], check=True)
+                print("Activated MyWifi connection.")
+                wifi_approved = True            
+            except subprocess.CalledProcessError as e:
+                # error_message = "Failed to activate WiFi connection because: " + str(e)
+                error_message = "Failed to activate WiFi connection. Please check the configuration and try again."
+                print(f"Failed to activate MyWifi connection: {e}")
+
+            # Wait for the WiFi connection to be established
+            time.sleep(5)
+        
 
         
-        # Bring up the WiFi connection
-        wifi_activated = False        
-        try:
-            print("Activating MyWifi connection...")
-            subprocess.run(['nmcli', 'con', 'up', 'MyWifi'], check=True)
-            print("Activated MyWifi connection.")
-            wifi_activated = True            
-        except subprocess.CalledProcessError as e:
-            # error_message = "Failed to activate WiFi connection because: " + str(e)
-            error_message = "Failed to activate WiFi connection. Please check the configuration and try again."
-            print(f"Failed to activate MyWifi connection: {e}")
-
-        # Wait for the WiFi connection to be established
-        time.sleep(5)
         
-       # Proceed with install script and reboot only if WiFi activation succeeded
-        if wifi_activated:
+        # Proceed with install script and reboot only if WiFi is approved
+        if wifi_approved:
             success_message = "WiFi connection activated successfully. Rebooting..."
             config = load_config()
             rendered_page = render_template(
                 "index.html",
-                config=config,
+                config=config,                
                 ssids=ssids,
                 error_message=None,
                 success_message=success_message
@@ -202,8 +218,9 @@ def index():
                 f.write(rendered_page)
 
 
-            # stop the button monitor service
-            os.system("sudo systemctl stop picaster-button-monitor.service")
+            # stop the button monitor service so the lights stop flashing
+            # DON'T DO THIS! It kills us because we are a child of the button monitor
+            # os.system("sudo systemctl stop picaster-button-monitor.service")
             if 'home_path' in config:
                 print("Running install script {}/install.py".format(config['home_path']))
             else:
@@ -230,9 +247,12 @@ def index():
                 with open("/tmp/rendered_page.html", "w") as f:
                     f.write(rendered_page)
 
+            
             # If we made it this far, reboot the system
             print("Rebooting...")
-            os.system("sudo reboot")
+            os.system("sudo systemctl reboot --force")            
+            time.sleep(5)
+            exit(0)
         else:
             print("Skipping install script and reboot due to WiFi activation failure.")
 

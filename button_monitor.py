@@ -140,6 +140,11 @@ def start_captive_portal():
     except Exception as e:
         print(f"Failed to start captive_portal.py: {e}")
 
+# First we need to shutdown the PiCaster-AP connection in case it is running
+try:
+    subprocess.run(['nmcli', 'con', 'down', 'PiCaster-AP'], check=True)
+except subprocess.CalledProcessError as e:
+    print(f"Failed to stop PiCaster-AP connection: {e}, moving on")
 
 try:
     button_pressed_time = None

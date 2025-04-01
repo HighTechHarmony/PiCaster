@@ -129,9 +129,9 @@
             <legend>WiFi Network Configuration</legend>
             <label for="ssid">Select Network:</label>
             <select id="ssid" name="ssid">
-                <!-- {% for ssid in ssids %}
-                <option value="{{ ssid }}">{{ ssid }}</option>
-                {% endfor %} -->
+                <option value="do_not_change" >-</option>
+                    Do Not Change
+                </option>
                 {% for network in ssids %}
                 <option value="{{ network }}" {% if network == ssid %}selected{% endif %}>
                     {{ network }}

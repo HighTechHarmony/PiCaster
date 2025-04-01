@@ -90,24 +90,24 @@ GPIO.setup(gpio_net_connect_ok_light, GPIO.OUT)
 
 
 def check_server(address, port):
-	# Create a TCP socket
-	s = socket.socket()
-	print("Attempting to connect to %s on port %s" % (address, port))
-	try:
-		s.connect((address, port))
-		print("Connected to %s on port %s" % (address, port))
-		s.close()
-		return True
-	except socket.error as e:
-		print("Connection to %s on port %s failed: %s" % (address, port, e))
-		return False
-
+    # Create a TCP socket
+    s = socket.socket()
+    s.settimeout(5)  # Set timeout to 5 seconds
+    print("Attempting to connect to %s on port %s" % (address, port))
+    try:
+        s.connect((address, port))
+        print("Connected to %s on port %s" % (address, port))
+        s.close()
+        return True
+    except (socket.timeout, socket.error) as e:
+        print("Connection to %s on port %s failed: %s" % (address, port, e))
+        return False
 
 while True:
 	if check_server (address, port):
 		GPIO.output(gpio_net_connect_ok_light, GPIO.HIGH)
 	else:
 		GPIO.output(gpio_net_connect_ok_light, GPIO.LOW)
-	time.sleep(15)
+	time.sleep(10)
 
 
