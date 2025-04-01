@@ -101,10 +101,12 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"Failed to activate PiCaster-AP connection: {e}")
 
-# generate_204 is a special URL that Android devices use to check if they are connected to the internet
-# Redirect this to / so that the captive portal page is served instead
-@app.route("/generate_204")
+# Redirections to cause popular smartphones automatically open captive portal page
+# Android
+@app.route("/generate_204") 
 @app.route("/gen_204")
+# Apple iOS
+@app.route("/hotspot-detect.html")
 def generate_204():    
     return redirect("/", code=302)
 
