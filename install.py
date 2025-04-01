@@ -187,23 +187,6 @@ with open(home_path + "/picaster-connect-test.service", "w") as output_file:
     )
     output_file.close()
 
-# Create the button monitor service file
-# [Unit]
-# Description=PiCaster reset button monitor
-# After=network-online.target
-# Wants=network-online.target
-
-# [Service]
-# Type=simple
-# User=runasuser
-# Group=runasuser
-# WorkingDirectory=home_path
-# ExecStart=/usr/bin/env bash -c 'exec /usr/bin/python3 /home/user/button_monitor.py'
-# Restart=always
-# RestartSec=5
-
-# [Install]
-# WantedBy=multi-user.target
 with open(home_path + "/picaster-button-monitor.service", "w") as output_file:
     output_file.write(
         "[Unit]\nDescription=PiCaster reset button monitor\nAfter=network-online.target\nWants=network-online.target\n\n"
@@ -222,23 +205,43 @@ with open(home_path + "/picaster-button-monitor.service", "w") as output_file:
     )
     output_file.close()
 
+# A service unit that disables the AP at bootup, in case it is running
+with open(home_path + "/picaster-ap-disable.service", "w") as output_file:
+    output_file.write(
+        "[Unit]\nDescription=Disable the PiCaster-AP NetworkManager Connection at Boot\nAfter=network.target\n\n"
+    )
+    output_file.write(
+        "[Service]\nType=oneshot\nExecStart=/usr/bin/nmcli con down \"PiCaster-AP\"\nRemainAfterExit=no\n\n"
+    )
+    output_file.write(
+        "[Install]\nWantedBy=multi-user.target\n"
+    )
+    output_file.close()
+
+
 
 # Copy the service file to /etc/systemd/system
 try:
     target_path = "/etc/systemd/system/picaster-broadcast.service"
-    print(f"Copying service file to {target_path}...")
+    print(f"Copying picaster-broadcast.service file to {target_path}...")
     shutil.copy(home_path + "/picaster-broadcast.service", target_path)
     print("Service file copied successfully.")
 
     target_path = "/etc/systemd/system/picaster-connect-test.service"
-    print(f"Copying service file to {target_path}...")
+    print(f"Copying picaster-connect-test.service file to {target_path}...")
     shutil.copy(home_path + "/picaster-connect-test.service", target_path)
     print("Service file copied successfully.")
 
     target_path = "/etc/systemd/system/picaster-button-monitor.service"
-    print(f"Copying service file to {target_path}...")
+    print(f"Copying picaster-button-monitor.service file to {target_path}...")
     shutil.copy(home_path + "/picaster-button-monitor.service", target_path)
     print("Service file copied successfully.")
+
+    target_path = "/etc/systemd/system/picaster-ap-disable.service"
+    print(f"Copying picaster-ap-disable.service file to {target_path}...")
+    shutil.copy(home_path + "/picaster-ap-disable.service", target_path)
+    print("Service file copied successfully.")
+
 
     # Reload systemd to recognize the new service
     os.system("sudo systemctl daemon-reload")
@@ -255,6 +258,7 @@ try:
     os.system("sudo systemctl start picaster-connect-test.service")
     os.system("sudo systemctl enable picaster-button-monitor.service")
     os.system("sudo systemctl start picaster-button-monitor.service")
+    os.system("sudo systemctl enable picaster-ap-disable.service")
 
 except PermissionError:
     print("Error: Root privileges are required to copy the service files to /etc/systemd/system.")

@@ -1,7 +1,4 @@
-libretime-vm.ls
-picaster-broadcast.service
-picaster-connect-test.service
-picaster-button-monitor.service
-picaster-captive-portal.service
+*.ls
+picaster-*.service
 picaster.conf
 
