@@ -206,9 +206,10 @@ with open(home_path + "/picaster-button-monitor.service", "w") as output_file:
     output_file.close()
 
 # A service unit that disables the AP at bootup, in case it is running
+# Needs to have After=network.target NetworkManager.service
 with open(home_path + "/picaster-ap-disable.service", "w") as output_file:
     output_file.write(
-        "[Unit]\nDescription=Disable the PiCaster-AP NetworkManager Connection at Boot\nAfter=network.target\n\n"
+        "[Unit]\nDescription=Disable the PiCaster-AP NetworkManager Connection at Boot\nAfter=network.target NetworkManager.service\n\n"
     )
     output_file.write(
         "[Service]\nType=oneshot\nExecStart=/usr/bin/nmcli con down \"PiCaster-AP\"\nRemainAfterExit=no\n\n"

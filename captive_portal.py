@@ -86,7 +86,7 @@ try:
     subprocess.run([
         'nmcli', 'con', 'add', 'con-name', 'PiCaster-AP', 'ifname', 'wlan0', 'type', 
         'wifi','ssid','PiCaster','mode','ap','wifi.band','bg','wifi.channel','6',
-        'ipv4.method', 'shared']
+        'ipv4.method', 'shared', 'connection.autoconnect', 'no',]
     , check=True)
         
         
