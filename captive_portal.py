@@ -36,7 +36,7 @@ def get_available_ssids():
         result = subprocess.run(['nmcli', '-t', '-f', 'SSID', 'dev', 'wifi'], capture_output=True, text=True, check=True)
         ssids = result.stdout.splitlines()
         # Remove empty SSIDs and duplicates
-        ssids = list(filter(None, set(ssids)))
+        ssids = list(filter(lambda ssid: ssid and ssid != "PiCaster", set(ssids)))
         # Sort the SSIDs by name
         ssids.sort(reverse=True)
 
@@ -131,54 +131,62 @@ def index():
         else:
             print(f"SSID is {ssid}")
             wifi_approved = False
-            
-        
-            # Delete the old WiFi connection using nmcli
-            # try:
-            #     # Delete the existing connection
-            #     subprocess.run(['nmcli', 'con', 'delete', 'MyWifi'], check=True)
-            #     print("Deleted existing MyWifi connection.")
-            # except subprocess.CalledProcessError as e:
-            #     # print(f"Failed to delete existing MyWifi connection: {e}")
-            #     # Do nothing
-            #     pass
-
 
         # Verify the WiFi connection
         if not wifi_approved:
             try:
-                # Either add or modify the WiFi connection, depending...
+                # Scan for available WiFi networks
+                print(f"Scanning for available WiFi networks...")
+                scan_result = subprocess.run(['nmcli', '-t', '-f', 'SSID,SECURITY', 'dev', 'wifi'], capture_output=True, text=True, check=True)
+                available_networks = scan_result.stdout.splitlines()
+
+                # Determine if the specified SSID uses WPA3
+                wpa3_enabled = False
+                for network in available_networks:
+                    # print (f"Reviewing network {network}")
+                    ssid_info, security_info = network.split(':', 1)
+                    if ssid_info == ssid and 'WPA3' in security_info:
+                        # print (f"Found {ssid} with WPA3 security")
+                        wpa3_enabled = True
+                        break
+                    # else:
+                        # print (f"Found {ssid} with WPA2 security")
+
                 print(f"Checking if MyWifi connection exists...")
                 result = subprocess.run(['nmcli', '-t', '-f', 'NAME', 'con', 'show'], capture_output=True, text=True, check=True)
                 existing_connections = result.stdout.splitlines()
 
                 if 'MyWifi' in existing_connections:
-                    print(f"MyWifi connection exists. Modifying the connection with SSID {ssid} and PSK {psk}.")
-                    if psk is None or psk == "":
-                        # Open network (no PSK)
-                        subprocess.run([
-                            'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid
-                        ], check=True)
-                    else:
-                        # Secured network
-                        subprocess.run([
-                            'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid,
-                            'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
-                        ], check=True)
+                    action = "modify"
                 else:
-                    print(f"MyWifi connection does not exist. Adding a new connection with SSID {ssid} and PSK {psk}.")
-                    if psk is None or psk == "":
-                        # Open network (no PSK)
-                        subprocess.run([
-                            'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
-                            'wifi', 'ssid', ssid
-                        ], check=True)
-                    else:
-                        # Secured network
-                        subprocess.run([
-                            'nmcli', 'con', 'add', 'con-name', 'MyWifi', 'ifname', 'wlan0', 'type',
-                            'wifi', 'ssid', ssid, 'wifi-sec.key-mgmt', 'wpa-psk', 'wifi-sec.psk', psk
-                        ], check=True)
+                    action = "add"
+                    
+                print(f"Configuring the connection with SSID {ssid} and PSK {psk}.")
+                if psk is None or psk == "":
+                    # Open network (no PSK)
+                    subprocess.run([
+                        'nmcli', 'con', action, 'MyWifi', 'wifi.ssid', ssid
+                    ], check=True)
+                else:
+                    # Secured network
+                    if wpa3_enabled:
+                        key_mgmt = 'sae'
+                        password_type = 'sae-password'                            
+                    else: 
+                        key_mgmt = 'wpa-psk'
+                        password_type = 'wifi-sec.psk'
+
+                    command = [
+                        'nmcli', 'con', 'modify', 'MyWifi', 'wifi.ssid', ssid,
+                        'wifi-sec.key-mgmt', key_mgmt, password_type, psk
+                    ]
+
+                    # Log the equivalent command line
+                    print(f"Running command: {' '.join(command)}")
+
+                    # Execute the command
+                    subprocess.run(command, check=True)
+                
 
                 print("WiFi connection configured successfully.")
             except subprocess.CalledProcessError as e:
